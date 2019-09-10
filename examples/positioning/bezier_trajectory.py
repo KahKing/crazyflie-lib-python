@@ -123,8 +123,7 @@ class Node:
     def get_tail_points(self):
         return self._control_points[1]
 
-    def draw_unscaled_controlpoints(self, visualizer):
-        color = (0.8, 0.8, 0.8)
+    def draw_unscaled_controlpoints(self, visualizer, color=(0.8, 0.8, 0.8)):
         for p in self._control_points[0]:
             visualizer.marker(p[0:3], color=color)
         for p in self._control_points[1]:
@@ -153,10 +152,12 @@ class Segment:
     """
 
     def __init__(self, head_node, tail_node, scale):
+        self._head_node = head_node
+        self._tail_node = tail_node
         self._scale = scale
 
         unscaled_points = np.concatenate(
-            [head_node.get_head_points(), tail_node.get_tail_points()])
+            [self._head_node.get_head_points(), self._tail_node.get_tail_points()])
 
         self._points = self._scale_control_points(unscaled_points, self._scale)
 
@@ -183,8 +184,8 @@ class Segment:
 
         return result
 
-    def draw_trajectory(self, visualizer):
-        self._draw(self._polys, 'black', visualizer)
+    def draw_trajectory(self, visualizer, color='black'):
+        self._draw(self._polys, color, visualizer)
 
     def draw_vel(self, visualizer):
         self._draw(self._vel, 'green', visualizer)
@@ -343,6 +344,7 @@ class Visualizer:
 segment_time = 2
 z = 1
 yaw = 0
+color = 'red'
 
 segments = []
 
@@ -354,24 +356,26 @@ n1 = Node((1, 0, z, yaw))
 n2 = Node((1, 1, z, yaw))
 n3 = Node((0, 1, z, yaw))
 
-segments.append(Segment(n0, n1, segment_time))
-segments.append(Segment(n1, n2, segment_time))
-segments.append(Segment(n2, n3, segment_time))
-segments.append(Segment(n3, n0, segment_time))
+segments.append({'s': Segment(n0, n1, segment_time), 'c': color})
+segments.append({'s': Segment(n1, n2, segment_time), 'c': color})
+segments.append({'s': Segment(n2, n3, segment_time), 'c': color})
+segments.append({'s': Segment(n3, n0, segment_time), 'c': color})
 
 
 # By setting the q1 control point we get velocity through the nodes
 # Increase d to 0.7 to get some more action
 d = 0.1
+color = 'green'
 
+n4 = Node((0, 0, z, yaw))
 n5 = Node((1, 0, z, yaw), q1=(1 + d, 0 + d, z, yaw))
 n6 = Node((1, 1, z, yaw), q1=(1 - d, 1 + d, z, yaw))
 n7 = Node((0, 1, z, yaw), q1=(0 - d, 1 - d, z, yaw))
 
-segments.append(Segment(n0, n5, segment_time))
-segments.append(Segment(n5, n6, segment_time))
-segments.append(Segment(n6, n7, segment_time))
-segments.append(Segment(n7, n0, segment_time))
+segments.append({'s': Segment(n4, n5, segment_time), 'c': color})
+segments.append({'s': Segment(n5, n6, segment_time), 'c': color})
+segments.append({'s': Segment(n6, n7, segment_time), 'c': color})
+segments.append({'s': Segment(n7, n4, segment_time), 'c': color})
 
 
 # When setting q2 we can also control acceleration and get more action.
@@ -380,30 +384,32 @@ segments.append(Segment(n7, n0, segment_time))
 d2 = 0.2
 dyaw = 2
 f = -0.3
+color = 'blue'
 
-n8 = Node(
+n8 = Node((0, 0, z, yaw))
+n9 = Node(
     (1, 0, z, yaw),
     q1=(1 + d2, 0 + d2, z, yaw),
     q2=(1 + 2 * d2, 0 + 2 * d2 + 0*f * d2, 1, yaw))
-n9 = Node(
+n10 = Node(
     (1, 1, z, yaw + dyaw),
     q1=(1 - d2, 1 + d2, z, yaw + dyaw),
     q2=(1 - 2 * d2 + f * d2, 1 + 2 * d2 + f * d2, 1, yaw + dyaw))
-n10 = Node(
+n11 = Node(
     (0, 1, z, yaw - dyaw),
     q1=(0 - d2, 1 - d2, z, yaw - dyaw),
     q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw))
 
-segments.append(Segment(n0, n8, segment_time))
-segments.append(Segment(n8, n9, segment_time))
-segments.append(Segment(n9, n10, segment_time))
-segments.append(Segment(n10, n0, segment_time))
+segments.append({'s': Segment(n8, n9, segment_time), 'c': color})
+segments.append({'s': Segment(n9, n10, segment_time), 'c': color})
+segments.append({'s': Segment(n10, n11, segment_time), 'c': color})
+segments.append({'s': Segment(n11, n8, segment_time), 'c': color})
 
 
 print('Paste this code into the autonomous_sequence_high_level.py example to '
       'see it fly')
-for s in segments:
-    s.print_poly_python()
+for segment in segments:
+    segment['s'].print_poly_python()
 
 
 # Enable this if you have Vispy installed and want a visualization of the
@@ -414,12 +420,14 @@ if False:
     from vispy.scene import XYZAxis, LinePlot, TurntableCamera, Markers
 
     visualizer = Visualizer()
-    for s in segments:
-        s.draw_trajectory(visualizer)
-        # s.draw_vel(visualizer)
-        # s.draw_control_points(visualizer)
+    for segment in segments:
+        segment['s'].draw_trajectory(visualizer, segment['c'])
+        # segment['s'].draw_vel(visualizer)
+        # segment['s'].draw_control_points(visualizer)
+        segment['s']._head_node.draw_unscaled_controlpoints(visualizer, segment['c'])
+        segment['s']._tail_node.draw_unscaled_controlpoints(visualizer, segment['c'])
 
-    for n in [n0, n1, n2, n3, n5, n6, n7, n8, n9, n10]:
-        n.draw_unscaled_controlpoints(visualizer)
+    # for n in [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11]:
+    #     n.draw_unscaled_controlpoints(visualizer)
 
     visualizer.run()
