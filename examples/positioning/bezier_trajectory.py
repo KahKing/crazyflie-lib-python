@@ -32,6 +32,13 @@ See https://en.wikipedia.org/wiki/B%C3%A9zier_curve
 All coordinates are (x, y, z, yaw)
 """
 
+# Enable this if you have Vispy installed and want a visualization of the
+# trajectory
+
+# Import here to avoid problems for users that do not have Vispy
+# from vispy import scene
+# from vispy.scene import XYZAxis, LinePlot, TurntableCamera, Markers      
+# visualizer = Visualizer()
 
 import math
 from mpl_toolkits.mplot3d import Axes3D 
@@ -39,6 +46,113 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
+
+draggable_points = []
+circles = []
+
+def findDraggablePoint(plot_name, point_id):
+    for draggable_point in draggable_points:
+        if draggable_point.plot_name is plot_name and draggable_point.point_id is point_id:
+            return draggable_point
+    return False
+
+class DraggablePoint:
+    lock = None #only one can be animated at a time
+    def __init__(self, plot_name, point_id, point):
+        self.plot_name = plot_name
+        self.point_id = point_id
+        self.point = point
+        self.press = None
+        self.background = None
+        self.connect()
+
+    def connect(self):
+        'connect to all the events we need'
+        self.cidpress = self.point.figure.canvas.mpl_connect('button_press_event', self.onPress)
+        self.cidrelease = self.point.figure.canvas.mpl_connect('button_release_event', self.onRelease)
+        self.cidmotion = self.point.figure.canvas.mpl_connect('motion_notify_event', self.onMotion)
+
+    
+    def onPress(self, event):
+        if event.inaxes != self.point.axes: return
+        if DraggablePoint.lock is not None: return
+        contains, attrd = self.point.contains(event)
+        if not contains: return
+        self.press = (self.point.center), event.xdata, event.ydata
+        DraggablePoint.lock = self
+
+        # draw everything but the selected rectangle and store the pixel buffer
+        canvas = self.point.figure.canvas
+        axes = self.point.axes
+        self.point.set_animated(True)
+        canvas.draw()
+        self.background = canvas.copy_from_bbox(self.point.axes.bbox)
+
+        # now redraw just the rectangle
+        axes.draw_artist(self.point)
+
+        # and blit just the redrawn area
+        canvas.blit(axes.bbox)
+
+    def onMotion(self, event):
+        if DraggablePoint.lock is not self:
+            return
+        if event.inaxes != self.point.axes: return
+        self.point.center, xpress, ypress = self.press
+        dx = event.xdata - xpress
+        dy = event.ydata - ypress
+        self.point.center = (self.point.center[0]+dx, self.point.center[1]+dy)
+        print(self.point_id, self.point.center)
+
+        other_plot_name = None
+        if self.plot_name is 'XY':
+            other_plot_name = 'XZ'
+
+        elif self.plot_name is 'XZ':
+            other_plot_name = 'XY'
+        else:
+            assert "Invalid plot name" + self.plot_name
+
+        other_draggable_point = findDraggablePoint(other_plot_name, self.point_id)
+        # print(other_draggable_point)
+        if other_draggable_point is not False:
+            # other_draggable_point.point.center = self.point.center
+            other_draggable_point.point.center = (self.point.center[0], other_draggable_point.point.center[1])
+
+        
+        canvas = self.point.figure.canvas
+        axes = self.point.axes
+        # restore the background region
+        canvas.restore_region(self.background)
+
+        # redraw just the current rectangle
+        axes.draw_artist(self.point)
+
+        # blit just the redrawn area
+        canvas.blit(axes.bbox)
+
+    def onRelease(self, event):
+        'on release we reset the press data'
+        if DraggablePoint.lock is not self:
+            return
+
+        self.press = None
+        DraggablePoint.lock = None
+
+        # turn off the rect animation property and reset the background
+        self.point.set_animated(False)
+        self.background = None
+
+        # redraw the full figure
+        self.point.figure.canvas.draw()
+
+    def disconnect(self):
+        'disconnect all the stored connection ids'
+        self.point.figure.canvas.mpl_disconnect(self.cidpress)
+        self.point.figure.canvas.mpl_disconnect(self.cidrelease)
+        self.point.figure.canvas.mpl_disconnect(self.cidmotion)
+
+
 
 
 class Node:
@@ -54,10 +168,10 @@ class Node:
     q0, q1, q2, q3 for the head of the second curve
     """
 
-    def __init__(self, q0, q1=None, q2=None, q3=None):
+    def __init__(self, node_id, q0, q1=None, q2=None, q3=None):
         """
         Create a Node. Pass in control points to define the shape of the
-        two segments that share the Node. The control points are for the
+        two sequence that share the Node. The control points are for the
         second segment, that is the four first control points of the Bezier
         curve after the node. The control points for the Bezier curve before
         the node are calculated from the existing control points.
@@ -74,13 +188,14 @@ class Node:
         If only q0 is set, the node will represent a point where the Crazyflie
         has no velocity. Good for starting and stopping.
 
-        To get a fluid motion between segments, q1 must be set.
+        To get a fluid motion between sequence, q1 must be set.
 
         :param q0: The position of the node
         :param q1: The position of the first control point
         :param q2: The position of the second control point
         :param q3: The position of the third control point
         """
+        self.node_id = node_id
         self._control_points = np.zeros([2, 4, 4])
 
         q0 = np.array(q0)
@@ -133,6 +248,76 @@ class Node:
             visualizer.marker(p[0:3], color=color)
         for p in self._control_points[1]:
             visualizer.marker(p[0:3], color=color)
+
+    
+            
+    def draw_controlpoints_matplot(self, ax, ax1, ax2,  color='k'):
+    
+        # control_points = self._control_points[0] + self._control_points[1]
+        for h,p in enumerate (self._control_points[0]): #headnode
+            
+            point_id =  'N' + str(self.node_id) + '_Q' + str(h)
+            # print(point_id)
+            # p = list(p)
+            # print(p[0], p[1],p[2])
+            ax.scatter(p[0], p[1],p[2], color = color)
+
+            plot_name = 'XY' 
+            other_draggable_point = findDraggablePoint(plot_name,point_id)
+            # print(other_draggable_point)
+            if other_draggable_point is False:
+                # ax1.scatter(p[0], p[1], color = color)
+                circ = patches.Circle((p[0], p[1]), 0.05, fc=color, alpha=0.25)
+                circles.append(circ)
+                ax1.add_patch(circ)
+                draggable_point = DraggablePoint(plot_name ,point_id , circ )
+                draggable_points.append(draggable_point)
+                print(plot_name,point_id)
+                
+                
+            plot_name = 'XZ' 
+            other_draggable_point = findDraggablePoint(plot_name,point_id)
+            # print(other_draggable_point)
+            if other_draggable_point is False:
+                # ax2.scatter(p[1],p[2], color = color)
+                circ = patches.Circle((p[1], p[2]), 0.05, fc=color, alpha=0.25)
+                circles.append(circ)
+                ax2.add_patch(circ)
+                draggable_point = DraggablePoint(plot_name , point_id , circ )
+                draggable_points.append(draggable_point)
+                print(plot_name,point_id)
+
+            
+        
+        for t,p in enumerate (self._control_points[1]): #tailnode -> self-run
+            point_id = 'N' + str(self.node_id) + '_P' + str(t)
+            # print(point_id)
+            # p = list(p)
+            # print(p[0], p[1],p[2])
+            ax.scatter(p[0], p[1],p[2], color = color)
+
+            plot_name = 'XY' 
+            other_draggable_point = findDraggablePoint(plot_name,point_id)
+            # print(other_draggable_point)
+            if other_draggable_point is False:
+                # ax1.scatter(p[0], p[1], color = color)
+                circ = patches.Circle((p[0], p[1]), 0.025, fc=color, alpha=0.25)
+                circles.append(circ)
+                ax1.add_patch(circ)
+                draggable_point = DraggablePoint('XY' ,point_id , circ )
+                draggable_points.append(draggable_point)
+
+            plot_name = 'XZ' 
+            other_draggable_point = findDraggablePoint(plot_name,point_id)
+            # print(other_draggable_point)
+            if other_draggable_point is False:
+                # ax2.scatter(p[1],p[2], color = color)
+                circ = patches.Circle((p[1], p[2]), 0.025, fc=color, alpha=0.25)
+                circles.append(circ)
+                ax2.add_patch(circ)
+                draggable_point = DraggablePoint('XZ' , point_id , circ )
+                draggable_points.append(draggable_point)            
+        
 
     def print(self):
         print('Node ---')
@@ -192,6 +377,9 @@ class Segment:
     def draw_trajectory(self, visualizer, color='black'):
         self._draw(self._polys, color, visualizer)
 
+    def draw_trajectory_matplot(self, ax, color='black'):
+        self._draw_matplot(self._polys, color, ax)
+
     def draw_vel(self, visualizer):
         self._draw(self._vel, 'green', visualizer)
 
@@ -213,7 +401,20 @@ class Segment:
 
             if prev is not None:
                 visualizer.line(p, prev, color=color)
+                
+            prev = p
 
+    def _draw_matplot(self, polys, color, ax):
+        step = self._scale / 32
+        prev = None
+        for t in np.arange(0.0, self._scale + step, step):
+            # print(polys)
+            p = self._eval_xyz(polys, t)
+            # print(p)    
+
+            if prev is not None:
+                ax.plot([prev[0], p[0]], [prev[1],p[1]],zs=[prev[2],p[2]],color = color)
+                
             prev = p
 
     def velocity(self, t):
@@ -349,39 +550,10 @@ class Visualizer:
 segment_time = 2
 z = 1
 yaw = 0
-color = 'red'
-
-segments = []
-
-# Nodes with one control point has not velocity, this is similar to calling
-# goto in the High-level commander
-
-n0 = Node((0, 0, z, yaw))
-n1 = Node((1, 0, z, yaw))
-n2 = Node((1, 1, z, yaw))
-n3 = Node((0, 1, z, yaw))
-
-segments.append({'s': Segment(n0, n1, segment_time), 'c': color})
-segments.append({'s': Segment(n1, n2, segment_time), 'c': color})
-segments.append({'s': Segment(n2, n3, segment_time), 'c': color})
-segments.append({'s': Segment(n3, n0, segment_time), 'c': color})
+sequence = []
 
 
-# By setting the q1 control point we get velocity through the nodes
-# Increase d to 0.7 to get some more action
-d = 0.1
-color = 'green'
-
-n4 = Node((0, 0, z, yaw))
-n5 = Node((1, 0, z, yaw), q1=(1 + d, 0 + d, z, yaw))
-n6 = Node((1, 1, z, yaw), q1=(1 - d, 1 + d, z, yaw))
-n7 = Node((0, 1, z, yaw), q1=(0 - d, 1 - d, z, yaw))
-
-segments.append({'s': Segment(n4, n5, segment_time), 'c': color})
-segments.append({'s': Segment(n5, n6, segment_time), 'c': color})
-segments.append({'s': Segment(n6, n7, segment_time), 'c': color})
-segments.append({'s': Segment(n7, n4, segment_time), 'c': color})
-
+####
 
 # When setting q2 we can also control acceleration and get more action.
 # Yaw also adds to the fun.
@@ -389,50 +561,122 @@ segments.append({'s': Segment(n7, n4, segment_time), 'c': color})
 d2 = 0.2
 dyaw = 2
 f = -0.3
-color = 'blue'
+color = 'b'
 
-n8 = Node((0, 0, z, yaw))
-n9 = Node(
+n8 = Node(8, (0, 0, z, yaw))
+n9 = Node(9,
     (1, 0, z, yaw),
     q1=(1 + d2, 0 + d2, z, yaw),
     q2=(1 + 2 * d2, 0 + 2 * d2 + 0*f * d2, 1, yaw))
-n10 = Node(
+n10 = Node(10,
     (1, 1, z, yaw + dyaw),
     q1=(1 - d2, 1 + d2, z, yaw + dyaw),
     q2=(1 - 2 * d2 + f * d2, 1 + 2 * d2 + f * d2, 1, yaw + dyaw))
-n11 = Node(
+n11 = Node(11,
     (0, 1, z, yaw - dyaw),
     q1=(0 - d2, 1 - d2, z, yaw - dyaw),
     q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw))
 
-segments.append({'s': Segment(n8, n9, segment_time), 'c': color})
-segments.append({'s': Segment(n9, n10, segment_time), 'c': color})
-segments.append({'s': Segment(n10, n11, segment_time), 'c': color})
-segments.append({'s': Segment(n11, n8, segment_time), 'c': color})
+sequence.append({'s': Segment(n8, n9, segment_time), 'c': color})
+sequence.append({'s': Segment(n9, n10, segment_time), 'c': color})
+sequence.append({'s': Segment(n10, n11, segment_time), 'c': color})
+sequence.append({'s': Segment(n11, n8, segment_time), 'c': color})
 
+####
+
+
+# By setting the q1 control point we get velocity through the nodes
+# Increase d to 0.7 to get some more action
+d = 0.1
+color = 'g'
+
+n4 = Node(4, (0, 0, z, yaw), q1=(0, 0, z, yaw), q2=(0, 0, z, yaw), q3=(0, 0, z, yaw))
+n5 = Node(5, (1, 0, z, yaw), q1=(1 + d, 0 + d, z, yaw))
+n6 = Node(6, (1, 1, z, yaw), q1=(1 - d, 1 + d, z, yaw))
+n7 = Node(7, (0, 1, z, yaw), q1=(0 - d, 1 - d, z, yaw))
+
+sequence.append({'s': Segment(n4, n5, segment_time), 'c': color})
+sequence.append({'s': Segment(n5, n6, segment_time), 'c': color})
+sequence.append({'s': Segment(n6, n7, segment_time), 'c': color})
+sequence.append({'s': Segment(n7, n4, segment_time), 'c': color})
+
+
+
+####
+
+color = 'r'
+
+
+# Nodes with one control point has not velocity, this is similar to calling
+# goto in the High-level commander
+
+n0 = Node(0, (0, 0, z, yaw))
+n1 = Node(1, (1, 0, z, yaw))
+n2 = Node(2, (1, 1, z, yaw))
+n3 = Node(3, (0, 1, z, yaw))
+
+# n12 = n0 k
+n12 = Node(12, (0.5, 0.5, z, yaw))
+
+sequence.append({'s': Segment(n0, n1, segment_time), 'c': color})
+sequence.append({'s': Segment(n1, n2, segment_time), 'c': color})
+sequence.append({'s': Segment(n2, n3, segment_time), 'c': color})
+sequence.append({'s': Segment(n3, n12, segment_time), 'c': color})
 
 print('Paste this code into the autonomous_sequence_high_level.py example to '
       'see it fly')
-for segment in segments:
+
+for segment in sequence:
     segment['s'].print_poly_python()
 
 
-# Enable this if you have Vispy installed and want a visualization of the
-# trajectory
-if False:
-    # Import here to avoid problems for users that do not have Vispy
-    from vispy import scene
-    from vispy.scene import XYZAxis, LinePlot, TurntableCamera, Markers
 
-    visualizer = Visualizer()
-    for segment in segments:
-        segment['s'].draw_trajectory(visualizer, segment['c'])
-        # segment['s'].draw_vel(visualizer)
-        # segment['s'].draw_control_points(visualizer)
-        segment['s']._head_node.draw_unscaled_controlpoints(visualizer, segment['c'])
-        segment['s']._tail_node.draw_unscaled_controlpoints(visualizer, segment['c'])
+    
+fig = plt.figure(figsize=(25,20))
+ax = fig.add_subplot(212,projection='3d')
 
+
+plot_name = 'XY'
+ax1 = fig.add_subplot(221,sharex=ax,sharey=ax)
+ax1.grid(True)
+        
+
+plot_name = 'XZ'
+ax2 = fig.add_subplot(222)
+plt.xlim(-1,2)
+plt.ylim(-1,2)
+ax2.grid(True)
+        
+
+for sequence_step in sequence:
+        
+    # sequence_step['s'].draw_trajectory(visualizer, sequence_step['c'])
+    # segment['s'].draw_vel(visualizer)
+    # segment['s'].draw_control_points(visualizer)
+    # sequence_step['s']._head_node.draw_unscaled_controlpoints(visualizer, sequence_step['c'])
+    # sequence_step['s']._tail_node.draw_unscaled_controlpoints(visualizer, sequence_step['c'])
+            
+    segment = sequence_step['s']
+    color = sequence_step['c']
+
+    segment.draw_trajectory_matplot(ax, color)
+ 
+    segment._head_node.draw_controlpoints_matplot(ax,ax1,ax2, color)
+    # segment._tail_node.draw_controlpoints_matplot(ax,ax1,ax2, color)
+        
+    # alternative ways:
+    # sequence_step['s']._head_node.draw_controlpoints_matplot(ax, sequence_step['c'])
+    # sequence_step['s']._tail_node.draw_controlpoints_matplot(ax, sequence_step['c'])
+    # sequence_step['s']._head_node.draw_controlpoints_matplot(ax1, sequence_step['c'])
+    # sequence_step['s']._tail_node.draw_controlpoints_matplot(ax1, sequence_step['c'])
+    # sequence_step['s']._head_node.draw_controlpoints_matplot(ax2, sequence_step['c'])
+    # sequence_step['s']._tail_node.draw_controlpoints_matplot(ax2, sequence_step['c'])
     # for n in [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11]:
     #     n.draw_unscaled_controlpoints(visualizer)
 
-    visualizer.run()
+if sequence[-1]:
+    segment = sequence_step['s']
+    segment._tail_node.draw_controlpoints_matplot(ax,ax1,ax2, color)
+
+plt.show()
+# visualizer.run()
