@@ -31,8 +31,13 @@ See https://en.wikipedia.org/wiki/B%C3%A9zier_curve
 
 All coordinates are (x, y, z, yaw)
 """
-import math
 
+
+import math
+from mpl_toolkits.mplot3d import Axes3D 
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 
 
