@@ -251,7 +251,7 @@ class Node:
 
     
             
-    def draw_controlpoints_matplot(self, ax, ax1, ax2,  color='k'):
+    def draw_controlpoints_matplot(self, ax3d, ax1, ax2,  color='k'):
     
         # control_points = self._control_points[0] + self._control_points[1]
         for h,p in enumerate (self._control_points[0]): #headnode
@@ -260,7 +260,7 @@ class Node:
             # print(point_id)
             # p = list(p)
             # print(p[0], p[1],p[2])
-            ax.scatter(p[0], p[1],p[2], color = color)
+            ax3d.scatter(p[0], p[1],p[2], color = color)
 
             plot_name = 'XY' 
             other_draggable_point = findDraggablePoint(plot_name,point_id)
@@ -294,7 +294,7 @@ class Node:
             # print(point_id)
             # p = list(p)
             # print(p[0], p[1],p[2])
-            ax.scatter(p[0], p[1],p[2], color = color)
+            ax3d.scatter(p[0], p[1],p[2], color = color)
 
             plot_name = 'XY' 
             other_draggable_point = findDraggablePoint(plot_name,point_id)
@@ -377,8 +377,8 @@ class Segment:
     # def draw_trajectory(self, visualizer, color='black'):
     #     self._draw(self._polys, color, visualizer)
 
-    def draw_trajectory_matplot(self, ax, color='black'):
-        self._draw_matplot(self._polys, color, ax)
+    def draw_trajectory_matplot(self, ax3d, color='black'):
+        self._draw_matplot(self._polys, color, ax3d)
 
     # def draw_vel(self, visualizer):
     #     self._draw(self._vel, 'green', visualizer)
@@ -404,7 +404,7 @@ class Segment:
                 
     #         prev = p
 
-    def _draw_matplot(self, polys, color, ax):
+    def _draw_matplot(self, polys, color, ax3d):
         step = self._scale / 32
         prev = None
         for t in np.arange(0.0, self._scale + step, step):
@@ -413,7 +413,7 @@ class Segment:
             # print(p)    
 
             if prev is not None:
-                ax.plot([prev[0], p[0]], [prev[1],p[1]],zs=[prev[2],p[2]],color = color)
+                ax3d.plot([prev[0], p[0]], [prev[1],p[1]],zs=[prev[2],p[2]],color = color)
                 
             prev = p
 
@@ -632,11 +632,11 @@ for segment in sequence:
 
     
 fig = plt.figure(figsize=(25,20))
-ax = fig.add_subplot(212,projection='3d')
+ax3d = fig.add_subplot(212,projection='3d')
 
 
 plot_name = 'XY'
-ax1 = fig.add_subplot(221,sharex=ax,sharey=ax)
+ax1 = fig.add_subplot(221,sharex=ax3d,sharey=ax3d)
 ax1.grid(True)
         
 
@@ -658,14 +658,14 @@ for sequence_step in sequence:
     segment = sequence_step['s']
     color = sequence_step['c']
 
-    segment.draw_trajectory_matplot(ax, color)
+    segment.draw_trajectory_matplot(ax3d, color)
  
-    segment._head_node.draw_controlpoints_matplot(ax,ax1,ax2, color)
-    # segment._tail_node.draw_controlpoints_matplot(ax,ax1,ax2, color)
+    segment._head_node.draw_controlpoints_matplot(ax3d,ax1,ax2, color)
+    # segment._tail_node.draw_controlpoints_matplot(ax3d,ax1,ax2, color)
         
     # alternative ways:
-    # sequence_step['s']._head_node.draw_controlpoints_matplot(ax, sequence_step['c'])
-    # sequence_step['s']._tail_node.draw_controlpoints_matplot(ax, sequence_step['c'])
+    # sequence_step['s']._head_node.draw_controlpoints_matplot(ax3d, sequence_step['c'])
+    # sequence_step['s']._tail_node.draw_controlpoints_matplot(ax3d, sequence_step['c'])
     # sequence_step['s']._head_node.draw_controlpoints_matplot(ax1, sequence_step['c'])
     # sequence_step['s']._tail_node.draw_controlpoints_matplot(ax1, sequence_step['c'])
     # sequence_step['s']._head_node.draw_controlpoints_matplot(ax2, sequence_step['c'])
@@ -675,7 +675,7 @@ for sequence_step in sequence:
 
 if sequence[-1]:
     segment = sequence_step['s']
-    segment._tail_node.draw_controlpoints_matplot(ax,ax1,ax2, color)
+    segment._tail_node.draw_controlpoints_matplot(ax3d,ax1,ax2, color)
 
 plt.show()
 # visualizer.run()
