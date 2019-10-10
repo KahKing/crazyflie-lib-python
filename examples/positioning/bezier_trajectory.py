@@ -58,7 +58,8 @@ def findDraggablePoint(plot_name, point_id):
 
 class DraggablePoint:
     lock = None #only one can be animated at a time
-    def __init__(self, plot_name, point_id, point):
+    def __init__(self, node_id, plot_name, point_id, point):
+        self.node_id = node_id
         self.plot_name = plot_name
         self.point_id = point_id
         self.point = point
@@ -270,7 +271,7 @@ class Node:
                 circ = patches.Circle((p[0], p[1]), 0.05, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax1.add_patch(circ)
-                draggable_point = DraggablePoint(plot_name ,point_id , circ )
+                draggable_point = DraggablePoint(self.node_id, plot_name ,point_id , circ )
                 draggable_points.append(draggable_point)
                 print(plot_name,point_id)
                 
@@ -283,7 +284,7 @@ class Node:
                 circ = patches.Circle((p[1], p[2]), 0.05, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax2.add_patch(circ)
-                draggable_point = DraggablePoint(plot_name , point_id , circ )
+                draggable_point = DraggablePoint(self.node_id,plot_name , point_id , circ )
                 draggable_points.append(draggable_point)
                 print(plot_name,point_id)
 
@@ -304,7 +305,7 @@ class Node:
                 circ = patches.Circle((p[0], p[1]), 0.025, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax1.add_patch(circ)
-                draggable_point = DraggablePoint('XY' ,point_id , circ )
+                draggable_point = DraggablePoint(self.node_id, plot_name ,point_id , circ )
                 draggable_points.append(draggable_point)
 
             plot_name = 'XZ' 
@@ -315,7 +316,7 @@ class Node:
                 circ = patches.Circle((p[1], p[2]), 0.025, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax2.add_patch(circ)
-                draggable_point = DraggablePoint('XZ' , point_id , circ )
+                draggable_point = DraggablePoint(self.node_id, plot_name , point_id , circ )
                 draggable_points.append(draggable_point)            
         
 
