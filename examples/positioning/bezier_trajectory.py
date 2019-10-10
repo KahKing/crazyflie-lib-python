@@ -155,6 +155,11 @@ class DraggablePoint:
 
 
 
+def findNode(node_id):
+    for node in nodes:
+        if node.node_id is node_id:
+            return node
+    return False
 
 class Node:
     """
@@ -552,7 +557,7 @@ segment_time = 2
 z = 1
 yaw = 0
 sequence = []
-
+nodes = []
 
 ####
 
@@ -564,24 +569,31 @@ dyaw = 2
 f = -0.3
 color = 'b'
 
-n8 = Node(8, (0, 0, z, yaw))
-n9 = Node(9,
-    (1, 0, z, yaw),
-    q1=(1 + d2, 0 + d2, z, yaw),
-    q2=(1 + 2 * d2, 0 + 2 * d2 + 0*f * d2, 1, yaw))
-n10 = Node(10,
-    (1, 1, z, yaw + dyaw),
-    q1=(1 - d2, 1 + d2, z, yaw + dyaw),
-    q2=(1 - 2 * d2 + f * d2, 1 + 2 * d2 + f * d2, 1, yaw + dyaw))
-n11 = Node(11,
-    (0, 1, z, yaw - dyaw),
-    q1=(0 - d2, 1 - d2, z, yaw - dyaw),
-    q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw))
+# n8 = Node(8, (0, 0, z, yaw))
+# n9 = Node(9,
+#     (1, 0, z, yaw),
+#     q1=(1 + d2, 0 + d2, z, yaw),
+#     q2=(1 + 2 * d2, 0 + 2 * d2 + 0*f * d2, 1, yaw))
+# n10 = Node(10,
+#     (1, 1, z, yaw + dyaw),
+#     q1=(1 - d2, 1 + d2, z, yaw + dyaw),
+#     q2=(1 - 2 * d2 + f * d2, 1 + 2 * d2 + f * d2, 1, yaw + dyaw))
+# n11 = Node(11,
+#     (0, 1, z, yaw - dyaw),
+#     q1=(0 - d2, 1 - d2, z, yaw - dyaw),
+#     q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw))
 
-sequence.append({'s': Segment(n8, n9, segment_time), 'c': color})
-sequence.append({'s': Segment(n9, n10, segment_time), 'c': color})
-sequence.append({'s': Segment(n10, n11, segment_time), 'c': color})
-sequence.append({'s': Segment(n11, n8, segment_time), 'c': color})
+ 
+# node=Node(node_id,q0)
+nodes.append(Node(8, (0, 0, z, yaw)))
+nodes.append(Node(9, (1, 0, z, yaw), q1=(1 + d2, 0 + d2, z, yaw), q2=(1 + 2 * d2, 0 + 2 * d2 + 0*f * d2, 1, yaw)))
+nodes.append(Node(10, (1, 1, z, yaw + dyaw), q1=(1 - d2, 1 + d2, z, yaw + dyaw), q2=(1 - 2 * d2 + f * d2, 1 + 2 * d2 + f * d2, 1, yaw + dyaw)))
+nodes.append(Node(11, (0, 1, z, yaw - dyaw), q1=(0 - d2, 1 - d2, z, yaw - dyaw), q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw)))
+# print(nodes)#.get_tail_points())
+sequence.append({'s': Segment(findNode(8), findNode(9), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(9), findNode(10), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(10), findNode(11), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(11), findNode(8), segment_time), 'c': color})
 
 ####
 
@@ -591,15 +603,22 @@ sequence.append({'s': Segment(n11, n8, segment_time), 'c': color})
 d = 0.1
 color = 'g'
 
-n4 = Node(4, (0, 0, z, yaw), q1=(0, 0, z, yaw), q2=(0, 0, z, yaw), q3=(0, 0, z, yaw))
-n5 = Node(5, (1, 0, z, yaw), q1=(1 + d, 0 + d, z, yaw))
-n6 = Node(6, (1, 1, z, yaw), q1=(1 - d, 1 + d, z, yaw))
-n7 = Node(7, (0, 1, z, yaw), q1=(0 - d, 1 - d, z, yaw))
+# n4 = Node(4, (0, 0, z, yaw), q1=(0, 0, z, yaw), q2=(0, 0, z, yaw), q3=(0, 0, z, yaw))
+# n5 = Node(5, (1, 0, z, yaw), q1=(1 + d, 0 + d, z, yaw))
+# n6 = Node(6, (1, 1, z, yaw), q1=(1 - d, 1 + d, z, yaw))
+# n7 = Node(7, (0, 1, z, yaw), q1=(0 - d, 1 - d, z, yaw))
 
-sequence.append({'s': Segment(n4, n5, segment_time), 'c': color})
-sequence.append({'s': Segment(n5, n6, segment_time), 'c': color})
-sequence.append({'s': Segment(n6, n7, segment_time), 'c': color})
-sequence.append({'s': Segment(n7, n4, segment_time), 'c': color})
+# node_id = 4,5,6,7
+# q0 = (0, 0, z, yaw), (1, 0, z, yaw), (1, 1, z, yaw), (0, 1, z, yaw)
+nodes.append(Node(4, (0, 0, z, yaw), q1=(0, 0, z, yaw), q2=(0, 0, z, yaw), q3=(0, 0, z, yaw)))
+nodes.append(Node(5, (1, 0, z, yaw), q1=(1 + d, 0 + d, z, yaw)))
+nodes.append(Node(6, (1, 1, z, yaw), q1=(1 - d, 1 + d, z, yaw)))
+nodes.append(Node(7, (0, 1, z, yaw), q1=(0 - d, 1 - d, z, yaw)))
+
+sequence.append({'s': Segment(findNode(4), findNode(5), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(5), findNode(6), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(6), findNode(7), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(7), findNode(4), segment_time), 'c': color})
 
 
 
@@ -611,18 +630,27 @@ color = 'r'
 # Nodes with one control point has not velocity, this is similar to calling
 # goto in the High-level commander
 
-n0 = Node(0, (0, 0, z, yaw))
-n1 = Node(1, (1, 0, z, yaw))
-n2 = Node(2, (1, 1, z, yaw))
-n3 = Node(3, (0, 1, z, yaw))
+# n0 = Node(0, (0, 0, z, yaw))
+# n1 = Node(1, (1, 0, z, yaw))
+# n2 = Node(2, (1, 1, z, yaw))
+# n3 = Node(3, (0, 1, z, yaw))
 
-# n12 = n0 k
-n12 = Node(12, (0.5, 0.5, z, yaw))
+# # n12 = n0 k
+# n12 = Node(12, (0.5, 0.5, z, yaw))
 
-sequence.append({'s': Segment(n0, n1, segment_time), 'c': color})
-sequence.append({'s': Segment(n1, n2, segment_time), 'c': color})
-sequence.append({'s': Segment(n2, n3, segment_time), 'c': color})
-sequence.append({'s': Segment(n3, n12, segment_time), 'c': color})
+# node_id = 0,1,2,3,12
+# q0 = (0, 0, z, yaw), (1, 0, z, yaw), (1, 1, z, yaw), (0, 1, z, yaw), (0.5, 0.5, z, yaw)
+nodes.append(Node(0, (0, 0, z, yaw)))
+nodes.append(Node(1, (1, 0, z, yaw)))
+nodes.append(Node(2, (1, 1, z, yaw)))
+nodes.append(Node(3, (0, 1, z, yaw)))
+nodes.append(Node(12, (0.5, 0.5, z, yaw)))
+
+
+sequence.append({'s': Segment(findNode(0), findNode(1), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(1), findNode(2), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(2), findNode(3), segment_time), 'c': color})
+sequence.append({'s': Segment(findNode(3), findNode(12), segment_time), 'c': color})
 
 print('Paste this code into the autonomous_sequence_high_level.py example to '
       'see it fly')
