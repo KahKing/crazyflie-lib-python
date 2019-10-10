@@ -544,6 +544,7 @@ class Segment:
 #         self.lines([a, b], color)
 
 #     def run(self):
+#         self.canvas.app.run()
 
 
 segment_time = 2
