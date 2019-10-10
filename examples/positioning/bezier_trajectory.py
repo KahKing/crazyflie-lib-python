@@ -243,11 +243,11 @@ class Node:
     def get_tail_points(self):
         return self._control_points[1]
 
-    def draw_unscaled_controlpoints(self, visualizer, color=(0.8, 0.8, 0.8)):
-        for p in self._control_points[0]:
-            visualizer.marker(p[0:3], color=color)
-        for p in self._control_points[1]:
-            visualizer.marker(p[0:3], color=color)
+    # def draw_unscaled_controlpoints(self, visualizer, color=(0.8, 0.8, 0.8)):
+    #     for p in self._control_points[0]:
+    #         visualizer.marker(p[0:3], color=color)
+    #     for p in self._control_points[1]:
+    #         visualizer.marker(p[0:3], color=color)
 
     
             
@@ -374,35 +374,35 @@ class Segment:
 
         return result
 
-    def draw_trajectory(self, visualizer, color='black'):
-        self._draw(self._polys, color, visualizer)
+    # def draw_trajectory(self, visualizer, color='black'):
+    #     self._draw(self._polys, color, visualizer)
 
     def draw_trajectory_matplot(self, ax, color='black'):
         self._draw_matplot(self._polys, color, ax)
 
-    def draw_vel(self, visualizer):
-        self._draw(self._vel, 'green', visualizer)
+    # def draw_vel(self, visualizer):
+    #     self._draw(self._vel, 'green', visualizer)
 
-    def draw_acc(self, visualizer):
-        self._draw(self._acc, 'red', visualizer)
+    # def draw_acc(self, visualizer):
+    #     self._draw(self._acc, 'red', visualizer)
 
-    def draw_jerk(self, visualizer):
-        self._draw(self._jerk, 'blue', visualizer)
+    # def draw_jerk(self, visualizer):
+    #     self._draw(self._jerk, 'blue', visualizer)
 
-    def draw_control_points(self, visualizer):
-        for p in self._points:
-            visualizer.marker(p[0:3])
+    # def draw_control_points(self, visualizer):
+    #     for p in self._points:
+            # visualizer.marker(p[0:3])
 
-    def _draw(self, polys, color, visualizer):
-        step = self._scale / 32
-        prev = None
-        for t in np.arange(0.0, self._scale + step, step):
-            p = self._eval_xyz(polys, t)
+    # def _draw(self, polys, color, visualizer):
+    #     step = self._scale / 32
+    #     prev = None
+    #     for t in np.arange(0.0, self._scale + step, step):
+    #         p = self._eval_xyz(polys, t)
 
-            if prev is not None:
-                visualizer.line(p, prev, color=color)
+    #         if prev is not None:
+    #             visualizer.line(p, prev, color=color)
                 
-            prev = p
+    #         prev = p
 
     def _draw_matplot(self, polys, color, ax):
         step = self._scale / 32
@@ -522,29 +522,28 @@ class Segment:
         return result
 
 
-class Visualizer:
-    def __init__(self):
-        self.canvas = scene.SceneCanvas(keys='interactive', size=(800, 600),
-                                        show=True)
-        view = self.canvas.central_widget.add_view()
-        view.bgcolor = '#ffffff'
-        view.camera = TurntableCamera(fov=10.0, distance=40.0, up='+z',
-                                      center=(0.0, 0.0, 1.0))
-        XYZAxis(parent=view.scene)
-        self.scene = view.scene
+# class Visualizer:
+#     def __init__(self):
+#         self.canvas = scene.SceneCanvas(keys='interactive', size=(800, 600),
+#                                         show=True)
+#         view = self.canvas.central_widget.add_view()
+#         view.bgcolor = '#ffffff'
+#         view.camera = TurntableCamera(fov=10.0, distance=40.0, up='+z',
+#                                       center=(0.0, 0.0, 1.0))
+#         XYZAxis(parent=view.scene)
+#         self.scene = view.scene
 
-    def marker(self, pos, color='black', size=8):
-        Markers(pos=np.array(pos, ndmin=2), face_color=color,
-                parent=self.scene, size=size)
+#     def marker(self, pos, color='black', size=8):
+#         Markers(pos=np.array(pos, ndmin=2), face_color=color,
+#                 parent=self.scene, size=size)
 
-    def lines(self, points, color='black'):
-        LinePlot(points, color=color, parent=self.scene)
+#     def lines(self, points, color='black'):
+#         LinePlot(points, color=color, parent=self.scene)
 
-    def line(self, a, b, color='black'):
-        self.lines([a, b], color)
+#     def line(self, a, b, color='black'):
+#         self.lines([a, b], color)
 
-    def run(self):
-        self.canvas.app.run()
+#     def run(self):
 
 
 segment_time = 2
