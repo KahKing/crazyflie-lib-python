@@ -37,11 +37,11 @@ All coordinates are (x, y, z, yaw)
 
 # Import here to avoid problems for users that do not have Vispy
 # from vispy import scene
-# from vispy.scene import XYZAxis, LinePlot, TurntableCamera, Markers      
+# from vispy.scene import XYZAxis, LinePlot, TurntableCamera, Markers
 # visualizer = Visualizer()
 
 import math
-from mpl_toolkits.mplot3d import Axes3D 
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -51,8 +51,6 @@ import numpy as np
 #global constants
 HEAD_NODE = 0
 TAIL_NODE = 1
-
-
 
 
 #global variables
@@ -66,8 +64,10 @@ def findDraggablePoint(plot_name, node_id, head_or_tail_node, control_point_id):
             return draggable_point
     return False
 
+
 class DraggablePoint:
-    lock = None #only one can be animated at a time
+    lock = None  # only one can be animated at a time
+
     def __init__(self, plot_name, node_id, head_or_tail_node, control_point_id, point):
         self.node_id = node_id
         self.plot_name = plot_name
@@ -80,16 +80,21 @@ class DraggablePoint:
 
     def connect(self):
         'connect to all the events we need'
-        self.cidpress = self.point.figure.canvas.mpl_connect('button_press_event', self.onPress)
-        self.cidrelease = self.point.figure.canvas.mpl_connect('button_release_event', self.onRelease)
-        self.cidmotion = self.point.figure.canvas.mpl_connect('motion_notify_event', self.onMotion)
+        self.cidpress = self.point.figure.canvas.mpl_connect(
+            'button_press_event', self.onPress)
+        self.cidrelease = self.point.figure.canvas.mpl_connect(
+            'button_release_event', self.onRelease)
+        self.cidmotion = self.point.figure.canvas.mpl_connect(
+            'motion_notify_event', self.onMotion)
 
-    
     def onPress(self, event):
-        if event.inaxes != self.point.axes: return
-        if DraggablePoint.lock is not None: return
+        if event.inaxes != self.point.axes:
+            return
+        if DraggablePoint.lock is not None:
+            return
         contains, attrd = self.point.contains(event)
-        if not contains: return
+        if not contains:
+            return
         self.press = (self.point.center), event.xdata, event.ydata
         DraggablePoint.lock = self
 
@@ -109,7 +114,8 @@ class DraggablePoint:
     def onMotion(self, event):
         if DraggablePoint.lock is not self:
             return
-        if event.inaxes != self.point.axes: return
+        if event.inaxes != self.point.axes:
+            return
         self.point.center, xpress, ypress = self.press
         dx = event.xdata - xpress
         dy = event.ydata - ypress
@@ -125,39 +131,36 @@ class DraggablePoint:
         else:
             assert "Invalid plot name" + self.plot_name
 
-
-
         # A q_ (old_control_point) has been moved
         # update the p7-p4 due to new q_ (new_control_point)
-        
+
         node = findNode(self.node_id)
         print(node.node_id)
 
         old_control_point = node._control_points[0][self.control_point_id]
         print(old_control_point)
         # print(self.point.center)
-        
+
         ori_x = old_control_point[0]
         ori_y = old_control_point[1]
         ori_z = old_control_point[2]
         ori_yaw = old_control_point[3]
 
-        
         if self.plot_name is 'XY':
-            ori_x =self.point.center[0]
-            ori_y =self.point.center[1]
+            ori_x = self.point.center[0]
+            ori_y = self.point.center[1]
             # new_control_point = [self.point.center[0], self.point.center[1], old_control_point[2], old_control_point[3]]
 
         elif self.plot_name is 'XZ':
-            ori_x =self.point.center[0]
-            ori_z =self.point.center[1]
+            ori_x = self.point.center[0]
+            ori_z = self.point.center[1]
             # new_control_point = [self.point.center[0], old_control_point[1], self.point.center[2], old_control_point[3]]
         else:
             assert "Invalid plot name" + self.plot_name
-        
+
         new_control_point = [ori_x, ori_y, ori_z, ori_yaw]
         print(new_control_point)
-        
+
         node._control_points[0][self.control_point_id] = new_control_point
 
         q0 = node._control_points[0][0]
@@ -167,32 +170,29 @@ class DraggablePoint:
 
         # node._control_points[0][0]=nodes.update_p(q0)
 
-        p7,p6,p5,p4 = node.update_p(q0,q1,q2,q3) 
-        print(p7,p6,p5,p4)
+        p7, p6, p5, p4 = node.update_p(q0, q1, q2, q3)
+        print(p7, p6, p5, p4)
 
         # Given the new qx, and p7-p4
         # move own plot's p7-p4
         # also move other plot's qx & p7-p4
 
-
-
         # UPDATE OWN TAIL NODE
 
+        head_or_tail_node = TAIL_NODE
 
-
-        head_or_tail_node =TAIL_NODE
-
-        p_control_point_id = 0 #p4
-        p_draggable_point = findDraggablePoint( self.plot_name,self.node_id, head_or_tail_node, p_control_point_id)
+        p_control_point_id = 0  # p4
+        p_draggable_point = findDraggablePoint(
+            self.plot_name, self.node_id, head_or_tail_node, p_control_point_id)
 
         print(p_draggable_point.point.center)
 
-
         # SYNC OTHER's HEAD NODE
 
-        head_or_tail_node  = HEAD_NODE
+        head_or_tail_node = HEAD_NODE
 
-        other_draggable_point = findDraggablePoint(other_plot_name,self.node_id, head_or_tail_node, self.control_point_id)
+        other_draggable_point = findDraggablePoint(
+            other_plot_name, self.node_id, head_or_tail_node, self.control_point_id)
         # # print(other_draggable_point)
         # if other_draggable_point is not False:
         # other_draggable_point.point.center = self.point.center
@@ -202,15 +202,11 @@ class DraggablePoint:
 
         ori_2d_x = other_draggable_point.point.center[0]
         ori_2d_y = other_draggable_point.point.center[1]
-        
-        #sync other plot's q_ at X axis only XY->XZ or XZ->XY
+
+        # sync other plot's q_ at X axis only XY->XZ or XZ->XY
         # other_draggable_point.point.center[0] = self_2d_x #does not work because cannnot assign tuple
         other_draggable_point.point.center = (self_2d_x, ori_2d_y)
         # other_draggable_point.point.center = (self.point.center[0], other_draggable_point.point.center[1])
-        
-
-
-
 
         canvas = self.point.figure.canvas
         axes = self.point.axes
@@ -245,12 +241,12 @@ class DraggablePoint:
         self.point.figure.canvas.mpl_disconnect(self.cidmotion)
 
 
-
 def findNode(node_id):
     for node in nodes:
         if node.node_id is node_id:
             return node
     return False
+
 
 class Node:
     """
@@ -294,9 +290,9 @@ class Node:
         """
         self.node_id = node_id
         self._control_points = np.zeros([2, 4, 4])
-        self.update_p(q0,q1,q2,q3)
+        self.update_p(q0, q1, q2, q3)
 
-    def update_p(self,q0,q1,q2,q3):
+    def update_p(self, q0, q1, q2, q3):
         q0 = np.array(q0)
 
         if q1 is None:
@@ -336,7 +332,7 @@ class Node:
         self._control_points[TAIL_NODE][1] = p5
         self._control_points[TAIL_NODE][0] = p4
 
-        return p7,p6,p5,p4
+        return p7, p6, p5, p4
 
     def get_head_points(self):
         return self._control_points[0]
@@ -350,21 +346,19 @@ class Node:
     #     for p in self._control_points[1]:
     #         visualizer.marker(p[0:3], color=color)
 
-    
-            
     def draw_controlpoints_matplot(self, ax3d, ax1, ax2,  color='k'):
-    
+
         # control_points = self._control_points[0] + self._control_points[1]
 
-        for head_or_tail_node in  [HEAD_NODE, TAIL_NODE]:
-            for index, p in enumerate (self._control_points[head_or_tail_node]):
+        for head_or_tail_node in [HEAD_NODE, TAIL_NODE]:
+            for index, p in enumerate(self._control_points[head_or_tail_node]):
                 print(head_or_tail_node)
-                
+
                 control_point_id = index
                 # print(control_point_id)
                 # p = list(p)
                 # print(p[0], p[1],p[2])
-                ax3d.scatter(p[0], p[1],p[2], color = color)
+                ax3d.scatter(p[0], p[1], p[2], color=color)
 
                 if head_or_tail_node == HEAD_NODE:
                     diameter = 0.05
@@ -373,34 +367,37 @@ class Node:
                     diameter = 0.025
                     prefix = 'p'
 
-
-                plot_name = 'XY' 
-                other_draggable_point = findDraggablePoint(plot_name,self.node_id,head_or_tail_node,control_point_id)
+                plot_name = 'XY'
+                other_draggable_point = findDraggablePoint(
+                    plot_name, self.node_id, head_or_tail_node, control_point_id)
                 # print(other_draggable_point)
                 # if other_draggable_point is False:
                 # ax1.scatter(p[0], p[1], color = color)
-                circ = patches.Circle((p[0], p[1]), diameter, fc=color, alpha=0.25)
+                circ = patches.Circle(
+                    (p[0], p[1]), diameter, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax1.add_patch(circ)
-                draggable_point = DraggablePoint(plot_name, self.node_id, head_or_tail_node, control_point_id , circ )
+                draggable_point = DraggablePoint(
+                    plot_name, self.node_id, head_or_tail_node, control_point_id, circ)
                 draggable_points.append(draggable_point)
-                print(plot_name, 'n' + str(self.node_id), prefix + str(control_point_id))
-                    
-                    
-                plot_name = 'XZ' 
-                other_draggable_point = findDraggablePoint(plot_name,self.node_id, head_or_tail_node, control_point_id)
+                print(plot_name, 'n' + str(self.node_id),
+                      prefix + str(control_point_id))
+
+                plot_name = 'XZ'
+                other_draggable_point = findDraggablePoint(
+                    plot_name, self.node_id, head_or_tail_node, control_point_id)
                 # print(other_draggable_point)
                 # if other_draggable_point is False:
                 # ax2.scatter(p[1],p[2], color = color)
-                circ = patches.Circle((p[1], p[2]), diameter, fc=color, alpha=0.25)
+                circ = patches.Circle(
+                    (p[1], p[2]), diameter, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax2.add_patch(circ)
-                draggable_point = DraggablePoint(plot_name, self.node_id, head_or_tail_node, control_point_id , circ )
+                draggable_point = DraggablePoint(
+                    plot_name, self.node_id, head_or_tail_node, control_point_id, circ)
                 draggable_points.append(draggable_point)
-                print(plot_name, 'n' + str(self.node_id) , prefix + str(control_point_id))
-
-        
-
+                print(plot_name, 'n' + str(self.node_id),
+                      prefix + str(control_point_id))
 
     def print(self):
         print('Node ---')
@@ -474,7 +471,7 @@ class Segment:
 
     # def draw_control_points(self, visualizer):
     #     for p in self._points:
-            # visualizer.marker(p[0:3])
+        # visualizer.marker(p[0:3])
 
     # def _draw(self, polys, color, visualizer):
     #     step = self._scale / 32
@@ -484,7 +481,7 @@ class Segment:
 
     #         if prev is not None:
     #             visualizer.line(p, prev, color=color)
-                
+
     #         prev = p
 
     def _draw_matplot(self, polys, color, ax3d):
@@ -493,11 +490,12 @@ class Segment:
         for t in np.arange(0.0, self._scale + step, step):
             # print(polys)
             p = self._eval_xyz(polys, t)
-            # print(p)    
+            # print(p)
 
             if prev is not None:
-                ax3d.plot([prev[0], p[0]], [prev[1],p[1]],zs=[prev[2],p[2]],color = color)
-                
+                ax3d.plot([prev[0], p[0]], [prev[1], p[1]],
+                          zs=[prev[2], p[2]], color=color)
+
             prev = p
 
     def velocity(self, t):
@@ -660,17 +658,24 @@ color = 'b'
 #     q1=(0 - d2, 1 - d2, z, yaw - dyaw),
 #     q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw))
 
- 
+
 # node=Node(node_id,q0)
 nodes.append(Node(8, (0, 0, z, yaw)))
-nodes.append(Node(9, (1, 0, z, yaw), q1=(1 + d2, 0 + d2, z, yaw), q2=(1 + 2 * d2, 0 + 2 * d2 + 0*f * d2, 1, yaw)))
-nodes.append(Node(10, (1, 1, z, yaw + dyaw), q1=(1 - d2, 1 + d2, z, yaw + dyaw), q2=(1 - 2 * d2 + f * d2, 1 + 2 * d2 + f * d2, 1, yaw + dyaw)))
-nodes.append(Node(11, (0, 1, z, yaw - dyaw), q1=(0 - d2, 1 - d2, z, yaw - dyaw), q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw)))
+nodes.append(Node(9, (1, 0, z, yaw), q1=(1 + d2, 0 + d2, z, yaw),
+                  q2=(1 + 2 * d2, 0 + 2 * d2 + 0*f * d2, 1, yaw)))
+nodes.append(Node(10, (1, 1, z, yaw + dyaw), q1=(1 - d2, 1 + d2, z, yaw + dyaw),
+                  q2=(1 - 2 * d2 + f * d2, 1 + 2 * d2 + f * d2, 1, yaw + dyaw)))
+nodes.append(Node(11, (0, 1, z, yaw - dyaw), q1=(0 - d2, 1 - d2, z,
+                                                 yaw - dyaw), q2=(0 - 2 * d2,  1 - 2 * d2,  1, yaw - dyaw)))
 # print(nodes)#.get_tail_points())
-sequence.append({'s': Segment(findNode(8), findNode(9), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(9), findNode(10), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(10), findNode(11), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(11), findNode(8), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(8), findNode(9), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(9), findNode(10), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(10), findNode(11), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(11), findNode(8), segment_time), 'c': color})
 
 ####
 
@@ -687,16 +692,20 @@ color = 'g'
 
 # node_id = 4,5,6,7
 # q0 = (0, 0, z, yaw), (1, 0, z, yaw), (1, 1, z, yaw), (0, 1, z, yaw)
-nodes.append(Node(4, (0, 0, z, yaw), q1=(0, 0, z, yaw), q2=(0, 0, z, yaw), q3=(0, 0, z, yaw)))
+nodes.append(Node(4, (0, 0, z, yaw), q1=(0, 0, z, yaw),
+                  q2=(0, 0, z, yaw), q3=(0, 0, z, yaw)))
 nodes.append(Node(5, (1, 0, z, yaw), q1=(1 + d, 0 + d, z, yaw)))
 nodes.append(Node(6, (1, 1, z, yaw), q1=(1 - d, 1 + d, z, yaw)))
 nodes.append(Node(7, (0, 1, z, yaw), q1=(0 - d, 1 - d, z, yaw)))
 
-sequence.append({'s': Segment(findNode(4), findNode(5), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(5), findNode(6), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(6), findNode(7), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(7), findNode(4), segment_time), 'c': color})
-
+sequence.append(
+    {'s': Segment(findNode(4), findNode(5), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(5), findNode(6), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(6), findNode(7), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(7), findNode(4), segment_time), 'c': color})
 
 
 ####
@@ -724,10 +733,14 @@ nodes.append(Node(3, (0, 1, z, yaw)))
 nodes.append(Node(12, (0.5, 0.5, z, yaw)))
 
 
-sequence.append({'s': Segment(findNode(0), findNode(1), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(1), findNode(2), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(2), findNode(3), segment_time), 'c': color})
-sequence.append({'s': Segment(findNode(3), findNode(12), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(0), findNode(1), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(1), findNode(2), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(2), findNode(3), segment_time), 'c': color})
+sequence.append(
+    {'s': Segment(findNode(3), findNode(12), segment_time), 'c': color})
 
 print('Paste this code into the autonomous_sequence_high_level.py example to '
       'see it fly')
@@ -736,40 +749,38 @@ for segment in sequence:
     segment['s'].print_poly_python()
 
 
-
-    
-fig = plt.figure(figsize=(25,20))
-ax3d = fig.add_subplot(212,projection='3d')
+fig = plt.figure(figsize=(25, 20))
+ax3d = fig.add_subplot(212, projection='3d')
 
 
 plot_name = 'XY'
-ax1 = fig.add_subplot(221,sharex=ax3d,sharey=ax3d)
+ax1 = fig.add_subplot(221, sharex=ax3d, sharey=ax3d)
 ax1.grid(True)
-        
+
 
 plot_name = 'XZ'
 ax2 = fig.add_subplot(222)
-plt.xlim(-1,2)
-plt.ylim(-1,2)
+plt.xlim(-1, 2)
+plt.ylim(-1, 2)
 ax2.grid(True)
-        
+
 
 for sequence_step in sequence:
-        
+
     # sequence_step['s'].draw_trajectory(visualizer, sequence_step['c'])
     # segment['s'].draw_vel(visualizer)
     # segment['s'].draw_control_points(visualizer)
     # sequence_step['s']._head_node.draw_unscaled_controlpoints(visualizer, sequence_step['c'])
     # sequence_step['s']._tail_node.draw_unscaled_controlpoints(visualizer, sequence_step['c'])
-            
+
     segment = sequence_step['s']
     color = sequence_step['c']
 
     segment.draw_trajectory_matplot(ax3d, color)
- 
-    segment._head_node.draw_controlpoints_matplot(ax3d,ax1,ax2, color)
+
+    segment._head_node.draw_controlpoints_matplot(ax3d, ax1, ax2, color)
     # segment._tail_node.draw_controlpoints_matplot(ax3d,ax1,ax2, color)
-        
+
     # alternative ways:
     # sequence_step['s']._head_node.draw_controlpoints_matplot(ax3d, sequence_step['c'])
     # sequence_step['s']._tail_node.draw_controlpoints_matplot(ax3d, sequence_step['c'])
@@ -782,7 +793,7 @@ for sequence_step in sequence:
 
 if sequence[-1]:
     segment = sequence_step['s']
-    segment._tail_node.draw_controlpoints_matplot(ax3d,ax1,ax2, color)
+    segment._tail_node.draw_controlpoints_matplot(ax3d, ax1, ax2, color)
 
 plt.show()
 # visualizer.run()
