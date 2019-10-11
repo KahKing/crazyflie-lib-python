@@ -47,8 +47,18 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 
+
+#global constants
+HEAD_NODE = 0
+TAIL_NODE = 1
+
+
+
+
+#global variables
 draggable_points = []
 circles = []
+
 
 def findDraggablePoint(plot_name, node_id, control_point_id):
     for draggable_point in draggable_points:
@@ -58,7 +68,7 @@ def findDraggablePoint(plot_name, node_id, control_point_id):
 
 class DraggablePoint:
     lock = None #only one can be animated at a time
-    def __init__(self, node_id, plot_name, control_point_id, point):
+    def __init__(self, plot_name, node_id, control_point_id, point):
         self.node_id = node_id
         self.plot_name = plot_name
         self.control_point_id = control_point_id
@@ -164,10 +174,26 @@ class DraggablePoint:
         # also move other plot's qx & p7-p4
 
         other_draggable_point = findDraggablePoint(other_plot_name,self.node_id, self.control_point_id)
-        # print(other_draggable_point)
-        if other_draggable_point is not False:
-            # other_draggable_point.point.center = self.point.center
-            other_draggable_point.point.center = (self.point.center[0], other_draggable_point.point.center[1])
+        # # print(other_draggable_point)
+        # if other_draggable_point is not False:
+        # other_draggable_point.point.center = self.point.center
+
+        self_2d_x = self.point.center[0]
+        self_2d_y = self.point.center[1]
+
+        ori_2d_x = other_draggable_point.point.center[0]
+        ori_2d_y = other_draggable_point.point.center[1]
+        
+        #sync other plot's q_ at X axis only XY->XZ or XZ->XY
+        # other_draggable_point.point.center[0] = self_2d_x #does not work because cannnot assign tuple
+        other_draggable_point.point.center = (self_2d_x, ori_2d_y)
+        # other_draggable_point.point.center = (self.point.center[0], other_draggable_point.point.center[1])
+
+
+        p_control_point_id = 0
+        p_draggable_point = findDraggablePoint( self.plot_name,self.node_id, p_control_point_id)
+
+
 
 
         canvas = self.point.figure.canvas
@@ -284,15 +310,15 @@ class Node:
         p5 = q2 - 4 * d
         p4 = 2 * e - q3
 
-        self._control_points[0][0] = q0
-        self._control_points[0][1] = q1
-        self._control_points[0][2] = q2
-        self._control_points[0][3] = q3
+        self._control_points[HEAD_NODE][0] = q0
+        self._control_points[HEAD_NODE][1] = q1
+        self._control_points[HEAD_NODE][2] = q2
+        self._control_points[HEAD_NODE][3] = q3
 
-        self._control_points[1][3] = p7
-        self._control_points[1][2] = p6
-        self._control_points[1][1] = p5
-        self._control_points[1][0] = p4
+        self._control_points[TAIL_NODE][3] = p7
+        self._control_points[TAIL_NODE][2] = p6
+        self._control_points[TAIL_NODE][1] = p5
+        self._control_points[TAIL_NODE][0] = p4
 
         return p7,p6,p5,p4
 
@@ -313,70 +339,52 @@ class Node:
     def draw_controlpoints_matplot(self, ax3d, ax1, ax2,  color='k'):
     
         # control_points = self._control_points[0] + self._control_points[1]
-        for h,p in enumerate (self._control_points[0]): #headnode
-            
-            control_point_id = h
-            # print(control_point_id)
-            # p = list(p)
-            # print(p[0], p[1],p[2])
-            ax3d.scatter(p[0], p[1],p[2], color = color)
 
-            plot_name = 'XY' 
-            other_draggable_point = findDraggablePoint(plot_name, self.node_id, control_point_id)
-            # print(other_draggable_point)
-            if other_draggable_point is False:
+        for head_or_tail_node in  [HEAD_NODE, TAIL_NODE]:
+            for index, p in enumerate (self._control_points[head_or_tail_node]):
+                print(head_or_tail_node)
+                
+                control_point_id = index
+                # print(control_point_id)
+                # p = list(p)
+                # print(p[0], p[1],p[2])
+                ax3d.scatter(p[0], p[1],p[2], color = color)
+
+                if head_or_tail_node == HEAD_NODE:
+                    diameter = 0.05
+                    prefix = 'q'
+                else:
+                    diameter = 0.025
+                    prefix = 'p'
+
+
+                plot_name = 'XY' 
+                other_draggable_point = findDraggablePoint(plot_name,self.node_id,control_point_id)
+                # print(other_draggable_point)
+                # if other_draggable_point is False:
                 # ax1.scatter(p[0], p[1], color = color)
-                circ = patches.Circle((p[0], p[1]), 0.05, fc=color, alpha=0.25)
+                circ = patches.Circle((p[0], p[1]), diameter, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax1.add_patch(circ)
-                draggable_point = DraggablePoint(self.node_id, plot_name ,control_point_id , circ )
+                draggable_point = DraggablePoint(plot_name, self.node_id,control_point_id , circ )
                 draggable_points.append(draggable_point)
-                print(plot_name, 'n' + str(self.node_id), 'q' + str(control_point_id))
-                
-                
-            plot_name = 'XZ' 
-            other_draggable_point = findDraggablePoint(plot_name,self.node_id,control_point_id)
-            # print(other_draggable_point)
-            if other_draggable_point is False:
+                print(plot_name, 'n' + str(self.node_id), prefix + str(control_point_id))
+                    
+                    
+                plot_name = 'XZ' 
+                other_draggable_point = findDraggablePoint(plot_name,self.node_id,control_point_id)
+                # print(other_draggable_point)
+                # if other_draggable_point is False:
                 # ax2.scatter(p[1],p[2], color = color)
-                circ = patches.Circle((p[1], p[2]), 0.05, fc=color, alpha=0.25)
+                circ = patches.Circle((p[1], p[2]), diameter, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax2.add_patch(circ)
-                draggable_point = DraggablePoint(self.node_id,plot_name , control_point_id , circ )
+                draggable_point = DraggablePoint(plot_name, self.node_id , control_point_id , circ )
                 draggable_points.append(draggable_point)
-                print(plot_name, 'n' + str(self.node_id) , 'q' + str(control_point_id))
+                print(plot_name, 'n' + str(self.node_id) , prefix + str(control_point_id))
 
-            
         
-        for t,p in enumerate (self._control_points[1]): #tailnode -> self-run
-            control_point_id = 'p' + str(t)
-            # print(control_point_id)
-            # p = list(p)
-            # print(p[0], p[1],p[2])
-            ax3d.scatter(p[0], p[1],p[2], color = color)
 
-            plot_name = 'XY' 
-            other_draggable_point = findDraggablePoint(plot_name,self.node_id,control_point_id)
-            # print(other_draggable_point)
-            if other_draggable_point is False:
-                # ax1.scatter(p[0], p[1], color = color)
-                circ = patches.Circle((p[0], p[1]), 0.025, fc=color, alpha=0.25)
-                circles.append(circ)
-                ax1.add_patch(circ)
-                draggable_point = DraggablePoint(self.node_id, plot_name ,control_point_id , circ )
-                draggable_points.append(draggable_point)
-
-            plot_name = 'XZ' 
-            other_draggable_point = findDraggablePoint(plot_name,self.node_id,control_point_id)
-            # print(other_draggable_point)
-            if other_draggable_point is False:
-                # ax2.scatter(p[1],p[2], color = color)
-                circ = patches.Circle((p[1], p[2]), 0.025, fc=color, alpha=0.25)
-                circles.append(circ)
-                ax2.add_patch(circ)
-                draggable_point = DraggablePoint(self.node_id, plot_name , control_point_id , circ )
-                draggable_points.append(draggable_point)            
-        
 
     def print(self):
         print('Node ---')
