@@ -203,7 +203,9 @@ class Node:
         """
         self.node_id = node_id
         self._control_points = np.zeros([2, 4, 4])
+        self.update_p(q0,q1,q2,q3)
 
+    def update_p(self,q0,q1,q2,q3):
         q0 = np.array(q0)
 
         if q1 is None:
@@ -242,6 +244,8 @@ class Node:
         self._control_points[1][2] = p6
         self._control_points[1][1] = p5
         self._control_points[1][0] = p4
+
+        return p7,p6,p5,p4
 
     def get_head_points(self):
         return self._control_points[0]
