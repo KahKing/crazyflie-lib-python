@@ -60,17 +60,18 @@ draggable_points = []
 circles = []
 
 
-def findDraggablePoint(plot_name, node_id, control_point_id):
+def findDraggablePoint(plot_name, node_id, head_or_tail_node, control_point_id):
     for draggable_point in draggable_points:
-        if draggable_point.plot_name is plot_name and draggable_point.node_id is node_id and draggable_point.control_point_id is control_point_id:
+        if draggable_point.plot_name is plot_name and draggable_point.node_id is node_id and draggable_point.head_or_tail_node is head_or_tail_node and draggable_point.control_point_id is control_point_id:
             return draggable_point
     return False
 
 class DraggablePoint:
     lock = None #only one can be animated at a time
-    def __init__(self, plot_name, node_id, control_point_id, point):
+    def __init__(self, plot_name, node_id, head_or_tail_node, control_point_id, point):
         self.node_id = node_id
         self.plot_name = plot_name
+        self.head_or_tail_node = head_or_tail_node
         self.control_point_id = control_point_id
         self.point = point
         self.press = None
@@ -173,7 +174,25 @@ class DraggablePoint:
         # move own plot's p7-p4
         # also move other plot's qx & p7-p4
 
-        other_draggable_point = findDraggablePoint(other_plot_name,self.node_id, self.control_point_id)
+
+
+        # UPDATE OWN TAIL NODE
+
+
+
+        head_or_tail_node =TAIL_NODE
+
+        p_control_point_id = 0 #p4
+        p_draggable_point = findDraggablePoint( self.plot_name,self.node_id, head_or_tail_node, p_control_point_id)
+
+        print(p_draggable_point.point.center)
+
+
+        # SYNC OTHER's HEAD NODE
+
+        head_or_tail_node  = HEAD_NODE
+
+        other_draggable_point = findDraggablePoint(other_plot_name,self.node_id, head_or_tail_node, self.control_point_id)
         # # print(other_draggable_point)
         # if other_draggable_point is not False:
         # other_draggable_point.point.center = self.point.center
@@ -188,10 +207,7 @@ class DraggablePoint:
         # other_draggable_point.point.center[0] = self_2d_x #does not work because cannnot assign tuple
         other_draggable_point.point.center = (self_2d_x, ori_2d_y)
         # other_draggable_point.point.center = (self.point.center[0], other_draggable_point.point.center[1])
-
-
-        p_control_point_id = 0
-        p_draggable_point = findDraggablePoint( self.plot_name,self.node_id, p_control_point_id)
+        
 
 
 
@@ -359,27 +375,27 @@ class Node:
 
 
                 plot_name = 'XY' 
-                other_draggable_point = findDraggablePoint(plot_name,self.node_id,control_point_id)
+                other_draggable_point = findDraggablePoint(plot_name,self.node_id,head_or_tail_node,control_point_id)
                 # print(other_draggable_point)
                 # if other_draggable_point is False:
                 # ax1.scatter(p[0], p[1], color = color)
                 circ = patches.Circle((p[0], p[1]), diameter, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax1.add_patch(circ)
-                draggable_point = DraggablePoint(plot_name, self.node_id,control_point_id , circ )
+                draggable_point = DraggablePoint(plot_name, self.node_id, head_or_tail_node, control_point_id , circ )
                 draggable_points.append(draggable_point)
                 print(plot_name, 'n' + str(self.node_id), prefix + str(control_point_id))
                     
                     
                 plot_name = 'XZ' 
-                other_draggable_point = findDraggablePoint(plot_name,self.node_id,control_point_id)
+                other_draggable_point = findDraggablePoint(plot_name,self.node_id, head_or_tail_node, control_point_id)
                 # print(other_draggable_point)
                 # if other_draggable_point is False:
                 # ax2.scatter(p[1],p[2], color = color)
                 circ = patches.Circle((p[1], p[2]), diameter, fc=color, alpha=0.25)
                 circles.append(circ)
                 ax2.add_patch(circ)
-                draggable_point = DraggablePoint(plot_name, self.node_id , control_point_id , circ )
+                draggable_point = DraggablePoint(plot_name, self.node_id, head_or_tail_node, control_point_id , circ )
                 draggable_points.append(draggable_point)
                 print(plot_name, 'n' + str(self.node_id) , prefix + str(control_point_id))
 
