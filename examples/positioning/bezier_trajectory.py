@@ -137,7 +137,7 @@ class DraggablePoint:
         node = findNode(self.node_id)
         print(node.node_id)
 
-        old_control_point = node._control_points[0][self.control_point_id]
+        old_control_point = node._control_points[HEAD_NODE][self.control_point_id]
         print(old_control_point)
         # print(self.point.center)
 
@@ -161,12 +161,12 @@ class DraggablePoint:
         new_control_point = [ori_x, ori_y, ori_z, ori_yaw]
         print(new_control_point)
 
-        node._control_points[0][self.control_point_id] = new_control_point
+        node._control_points[HEAD_NODE][self.control_point_id] = new_control_point
 
-        q0 = node._control_points[0][0]
-        q1 = node._control_points[0][1]
-        q2 = node._control_points[0][2]
-        q3 = node._control_points[0][3]
+        q0 = node._control_points[HEAD_NODE][0]
+        q1 = node._control_points[HEAD_NODE][1]
+        q2 = node._control_points[HEAD_NODE][2]
+        q3 = node._control_points[HEAD_NODE][3]
 
         # node._control_points[0][0]=nodes.update_p(q0)
 
@@ -184,8 +184,25 @@ class DraggablePoint:
         p_control_point_id = 0  # p4
         p_draggable_point = findDraggablePoint(
             self.plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        p_draggable_point.point.center = (p4[0], p4[1])
 
+        p_control_point_id = 1  # p5
+        p_draggable_point = findDraggablePoint(
+            self.plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        p_draggable_point.point.center = (p5[0], p5[1])
+        
+        p_control_point_id = 2  # p6
+        p_draggable_point = findDraggablePoint(
+            self.plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        p_draggable_point.point.center = (p6[0], p6[1])
+
+        p_control_point_id = 3  # p7
+        p_draggable_point = findDraggablePoint(
+            self.plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        p_draggable_point.point.center = (p7[0], p7[1])
+        
         print(p_draggable_point.point.center)
+
 
         # SYNC OTHER's HEAD NODE
 
@@ -197,16 +214,35 @@ class DraggablePoint:
         # if other_draggable_point is not False:
         # other_draggable_point.point.center = self.point.center
 
-        self_2d_x = self.point.center[0]
-        self_2d_y = self.point.center[1]
+        # self_2d_x = self.point.center[0]
+        # self_2d_y = self.point.center[1]
 
-        ori_2d_x = other_draggable_point.point.center[0]
-        ori_2d_y = other_draggable_point.point.center[1]
+        # ori_2d_x = other_draggable_point.point.center[0]
+        # ori_2d_y = other_draggable_point.point.center[1]
 
-        # sync other plot's q_ at X axis only XY->XZ or XZ->XY
-        # other_draggable_point.point.center[0] = self_2d_x #does not work because cannnot assign tuple
-        other_draggable_point.point.center = (self_2d_x, ori_2d_y)
-        # other_draggable_point.point.center = (self.point.center[0], other_draggable_point.point.center[1])
+        # # sync other plot's q_ at X axis only XY->XZ or XZ->XY
+        # # other_draggable_point.point.center[0] = self_2d_x #does not work because cannnot assign tuple
+        # other_draggable_point.point.center = (self_2d_x, ori_2d_y)
+        other_draggable_point.point.center = (self.point.center[0], other_draggable_point.point.center[1])
+        
+        # SYNC OTHER's TAIL NODE
+        head_or_tail_node = TAIL_NODE
+        
+        other_p_draggable_point = findDraggablePoint(
+            other_plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        other_p_draggable_point.point.center = (p4[0], p4[1]) 
+        
+        other_p_draggable_point = findDraggablePoint(
+            other_plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        other_p_draggable_point.point.center = (p5[0], p5[1]) 
+        
+        other_p_draggable_point = findDraggablePoint(
+            other_plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        other_p_draggable_point.point.center = (p6[0], p6[1]) 
+        
+        other_p_draggable_point = findDraggablePoint(
+            other_plot_name, self.node_id, head_or_tail_node, p_control_point_id)
+        other_p_draggable_point.point.center = (p7[0], p7[1])  
 
         canvas = self.point.figure.canvas
         axes = self.point.axes
